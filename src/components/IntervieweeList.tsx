@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -31,6 +31,8 @@ interface Interviewee {
   interviewData?: any; // Will store the interview form data
 }
 
+const INTERVIEWEE_STORAGE_KEY = 'interviewees';
+
 const IntervieweeList: React.FC = () => {
   const [interviewees, setInterviewees] = useState<Interviewee[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
@@ -41,6 +43,19 @@ const IntervieweeList: React.FC = () => {
     phone: '',
     interviewDate: new Date().toISOString().split('T')[0],
   });
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(INTERVIEWEE_STORAGE_KEY);
+    if (stored) {
+      setInterviewees(JSON.parse(stored));
+    }
+  }, []);
+
+  // Save to localStorage whenever interviewees change
+  useEffect(() => {
+    localStorage.setItem(INTERVIEWEE_STORAGE_KEY, JSON.stringify(interviewees));
+  }, [interviewees]);
 
   const handleAddInterviewee = () => {
     const newId = Date.now().toString();
