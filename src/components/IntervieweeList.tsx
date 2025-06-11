@@ -18,7 +18,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import { Add as AddIcon, Download as DownloadIcon, CheckCircle as CheckCircleIcon, Cancel as CancelIcon, Edit as EditIcon } from '@mui/icons-material';
+import { Add as AddIcon, Download as DownloadIcon, CheckCircle as CheckCircleIcon, Cancel as CancelIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import InterviewForm from './InterviewForm';
 
 interface Interviewee {
@@ -97,6 +97,12 @@ const IntervieweeList: React.FC = () => {
   const handleEditInterview = (interviewee: Interviewee) => {
     setSelectedInterviewee(interviewee);
     setOpenInterview(true);
+  };
+
+  const handleDeleteInterviewee = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this interviewee?')) {
+      setInterviewees(interviewees.filter(interviewee => interviewee.id !== id));
+    }
   };
 
   const exportToCSV = () => {
@@ -243,11 +249,20 @@ const IntervieweeList: React.FC = () => {
                       <IconButton
                         color="primary"
                         onClick={() => handleEditInterview(interviewee)}
+                        sx={{ mr: 1 }}
                       >
                         <EditIcon />
                       </IconButton>
                     </Tooltip>
                   )}
+                  <Tooltip title="Delete Interviewee">
+                    <IconButton
+                      color="error"
+                      onClick={() => handleDeleteInterviewee(interviewee.id)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </TableCell>
               </TableRow>
             ))}
