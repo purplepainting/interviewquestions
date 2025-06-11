@@ -18,7 +18,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
-import { Add as AddIcon, Download as DownloadIcon, CheckCircle as CheckCircleIcon, Cancel as CancelIcon } from '@mui/icons-material';
+import { Add as AddIcon, Download as DownloadIcon, CheckCircle as CheckCircleIcon, Cancel as CancelIcon, Edit as EditIcon } from '@mui/icons-material';
 import InterviewForm from './InterviewForm';
 
 interface Interviewee {
@@ -92,6 +92,11 @@ const IntervieweeList: React.FC = () => {
         ? { ...interviewee, confirmed: false }
         : interviewee
     ));
+  };
+
+  const handleEditInterview = (interviewee: Interviewee) => {
+    setSelectedInterviewee(interviewee);
+    setOpenInterview(true);
   };
 
   const exportToCSV = () => {
@@ -204,33 +209,42 @@ const IntervieweeList: React.FC = () => {
                   )}
                 </TableCell>
                 <TableCell>
-                  {!interviewee.interviewCompleted && (
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => handleStartInterview(interviewee)}
-                      sx={{ mr: 1 }}
-                    >
-                      Start Interview
-                    </Button>
-                  )}
-                  {!interviewee.confirmed && !interviewee.interviewCompleted && (
-                    <Tooltip title="Confirm Attendance">
-                      <IconButton
-                        color="success"
-                        onClick={() => handleConfirmAttendance(interviewee.id)}
+                  {!interviewee.interviewCompleted ? (
+                    <>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => handleStartInterview(interviewee)}
+                        sx={{ mr: 1 }}
                       >
-                        <CheckCircleIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {interviewee.confirmed && !interviewee.interviewCompleted && (
-                    <Tooltip title="Cancel Attendance">
+                        Start Interview
+                      </Button>
+                      {!interviewee.confirmed && (
+                        <Tooltip title="Confirm Attendance">
+                          <IconButton
+                            color="success"
+                            onClick={() => handleConfirmAttendance(interviewee.id)}
+                          >
+                            <CheckCircleIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Cancel Attendance">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleCancelAttendance(interviewee.id)}
+                        >
+                          <CancelIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  ) : (
+                    <Tooltip title="Edit Interview">
                       <IconButton
-                        color="error"
-                        onClick={() => handleCancelAttendance(interviewee.id)}
+                        color="primary"
+                        onClick={() => handleEditInterview(interviewee)}
                       >
-                        <CancelIcon />
+                        <EditIcon />
                       </IconButton>
                     </Tooltip>
                   )}
@@ -286,11 +300,16 @@ const IntervieweeList: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          Interview for {selectedInterviewee?.name}
+          {selectedInterviewee?.interviewCompleted ? 'Edit Interview' : 'New Interview'} for {selectedInterviewee?.name}
         </DialogTitle>
         <DialogContent>
           <InterviewForm
-            initialData={selectedInterviewee?.interviewData}
+            initialData={{
+              ...selectedInterviewee?.interviewData,
+              name: selectedInterviewee?.name,
+              phone: selectedInterviewee?.phone,
+              date: selectedInterviewee?.interviewDate
+            }}
             onComplete={handleInterviewComplete}
           />
         </DialogContent>

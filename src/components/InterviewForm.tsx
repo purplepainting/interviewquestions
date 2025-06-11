@@ -117,6 +117,9 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               label="Name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              InputProps={{
+                readOnly: Boolean(initialData?.name)
+              }}
             />
           </Grid>
 
@@ -126,6 +129,9 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               label="Phone Number"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              InputProps={{
+                readOnly: Boolean(initialData?.phone)
+              }}
             />
           </Grid>
 
