@@ -334,6 +334,14 @@ const IntervieweeList: React.FC = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Typography color="error">{error}</Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => navigate('/admin')}
+          sx={{ mt: 2 }}
+        >
+          Back to Dashboard
+        </Button>
       </Container>
     );
   }
@@ -342,6 +350,14 @@ const IntervieweeList: React.FC = () => {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Typography>No interview date found</Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => navigate('/admin')}
+          sx={{ mt: 2 }}
+        >
+          Back to Dashboard
+        </Button>
       </Container>
     );
   }
