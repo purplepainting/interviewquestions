@@ -10,29 +10,25 @@ const Navigation: React.FC = () => {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith('/admin');
 
+  if (!isAdminPage) {
+    return null;
+  }
+
   return (
     <AppBar position="static">
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Purple Painting Interview System
         </Typography>
-        {isAdminPage ? (
-          <>
-            <Button color="inherit" component={Link} to="/admin">
-              Admin Dashboard
-            </Button>
-            <Button color="inherit" component={Link} to="/admin/create">
-              Create Interview
-            </Button>
-            <Button color="inherit" component={Link} to="/admin/interviewees">
-              View Interviewees
-            </Button>
-          </>
-        ) : (
-          <Button color="inherit" component={Link} to="/admin">
-            Admin Login
-          </Button>
-        )}
+        <Button color="inherit" component={Link} to="/admin">
+          Admin Dashboard
+        </Button>
+        <Button color="inherit" component={Link} to="/admin/create">
+          Create Interview
+        </Button>
+        <Button color="inherit" component={Link} to="/admin/interviewees">
+          View Interviewees
+        </Button>
       </Toolbar>
     </AppBar>
   );
