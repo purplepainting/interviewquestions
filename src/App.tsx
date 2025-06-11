@@ -1,35 +1,38 @@
 import React from 'react';
-import { ThemeProvider, createTheme, CssBaseline, Container, Typography, Box } from '@mui/material';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Button, Container } from '@mui/material';
 import IntervieweeList from './components/IntervieweeList';
+import AdminLanding from './pages/AdminLanding';
+import CreateInterview from './pages/CreateInterview';
+import ReserveSlot from './pages/ReserveSlot';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#6a1b9a', // Purple color matching the company theme
-    },
-    secondary: {
-      main: '#4a148c',
-    },
-  },
-});
-
-function App() {
+const App: React.FC = () => {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Container maxWidth="lg">
-        <Box sx={{ my: 4 }}>
-          <Typography variant="h3" component="h1" gutterBottom align="center" color="primary">
-            Purple Painting
+    <Router>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Purple Painting Interview System
           </Typography>
-          <Typography variant="h5" component="h2" gutterBottom align="center" color="text.secondary">
-            Interview Management System
-          </Typography>
-          <IntervieweeList />
-        </Box>
+          <Button color="inherit" component={Link} to="/">
+            Reserve Slot
+          </Button>
+          <Button color="inherit" component={Link} to="/admin">
+            Admin
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      <Container>
+        <Routes>
+          <Route path="/" element={<ReserveSlot />} />
+          <Route path="/admin" element={<AdminLanding />} />
+          <Route path="/admin/create" element={<CreateInterview />} />
+          <Route path="/admin/interviewees" element={<IntervieweeList />} />
+        </Routes>
       </Container>
-    </ThemeProvider>
+    </Router>
   );
-}
+};
 
 export default App; 
