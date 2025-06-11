@@ -36,6 +36,7 @@ const CreateInterview: React.FC = () => {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const generateTimeSlots = (start: string, end: string): string[] => {
     const slots: string[] = [];
@@ -71,28 +72,43 @@ const CreateInterview: React.FC = () => {
       return;
     }
 
-    const slots = generateTimeSlots(startTime, endTime).map(time => ({
-      id: `${Date.now()}-${time}`,
-      time,
-      isBooked: false
-    }));
+    try {
+      const slots = generateTimeSlots(startTime, endTime).map(time => ({
+        id: `${Date.now()}-${time}`,
+        time,
+        isBooked: false
+      }));
 
-    const newInterviewDate: InterviewDate = {
-      id: Date.now().toString(),
-      date,
-      startTime,
-      endTime,
-      slots
-    };
+      const newInterviewDate: InterviewDate = {
+        id: Date.now().toString(),
+        date,
+        startTime,
+        endTime,
+        slots
+      };
 
-    // Get existing dates
-    const existingDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
-    
-    // Add new date
-    localStorage.setItem('interviewDates', JSON.stringify([...existingDates, newInterviewDate]));
+      // Get existing dates
+      const existingDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
+      
+      // Add new date
+      localStorage.setItem('interviewDates', JSON.stringify([...existingDates, newInterviewDate]));
 
-    // Navigate back to admin page
-    navigate('/admin');
+      // Show success message
+      setSuccess(true);
+      setError('');
+
+      // Reset form
+      setDate('');
+      setStartTime('');
+      setEndTime('');
+
+      // Navigate back to admin page after 2 seconds
+      setTimeout(() => {
+        navigate('/admin');
+      }, 2000);
+    } catch (err) {
+      setError('An error occurred while saving the interview date. Please try again.');
+    }
   };
 
   return (
@@ -106,6 +122,12 @@ const CreateInterview: React.FC = () => {
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
+            </Alert>
+          )}
+
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Interview date created successfully! Redirecting to admin page...
             </Alert>
           )}
 
@@ -158,6 +180,7 @@ const CreateInterview: React.FC = () => {
                   <Button
                     type="submit"
                     variant="contained"
+                    disabled={success}
                   >
                     Create Interview Date
                   </Button>

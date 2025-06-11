@@ -1,24 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
   Typography,
-  Button,
   Paper,
+  Button,
   Grid,
+  Card,
+  CardContent,
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
+  Divider,
+  Chip,
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  History as HistoryIcon,
-  People as PeopleIcon,
-  Schedule as ScheduleIcon,
-} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import AddIcon from '@mui/icons-material/Add';
+import PeopleIcon from '@mui/icons-material/People';
+import HistoryIcon from '@mui/icons-material/History';
 
 interface InterviewDate {
   id: string;
@@ -41,124 +40,131 @@ interface InterviewSlot {
 
 const AdminLanding: React.FC = () => {
   const navigate = useNavigate();
-  const [interviewDates, setInterviewDates] = React.useState<InterviewDate[]>(() => {
-    const saved = localStorage.getItem('interviewDates');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [interviewDates, setInterviewDates] = useState<InterviewDate[]>([]);
 
-  React.useEffect(() => {
-    localStorage.setItem('interviewDates', JSON.stringify(interviewDates));
-  }, [interviewDates]);
+  useEffect(() => {
+    const dates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
+    setInterviewDates(dates);
+  }, []);
 
-  const handleCreateNewInterview = () => {
-    navigate('/admin/create-interview');
-  };
-
-  const handleViewInterviewees = () => {
-    navigate('/admin/interviewees');
-  };
-
-  const handleViewHistory = () => {
-    navigate('/admin/history');
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   return (
     <Container maxWidth="lg">
       <Box sx={{ my: 4 }}>
-        <Typography variant="h3" component="h1" gutterBottom align="center" color="primary">
-          Purple Painting
-        </Typography>
-        <Typography variant="h5" component="h2" gutterBottom align="center" color="text.secondary">
-          Interview Management System
+        <Typography variant="h4" component="h1" gutterBottom align="center">
+          Interview Management Dashboard
         </Typography>
 
-        <Grid container spacing={3} sx={{ mt: 4 }}>
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Quick Actions
-              </Typography>
-              <List>
-                <ListItem>
-                  <ListItemText 
-                    primary="Create New Interview Date" 
-                    secondary="Schedule a new interview session"
-                  />
-                  <ListItemSecondaryAction>
-                    <Button
-                      variant="contained"
-                      startIcon={<AddIcon />}
-                      onClick={handleCreateNewInterview}
-                    >
-                      Create
-                    </Button>
-                  </ListItemSecondaryAction>
-                </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="View Interviewees" 
-                    secondary="See all scheduled interviews"
-                  />
-                  <ListItemSecondaryAction>
-                    <Button
-                      variant="outlined"
-                      startIcon={<PeopleIcon />}
-                      onClick={handleViewInterviewees}
-                    >
-                      View
-                    </Button>
-                  </ListItemSecondaryAction>
-                </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Interview History" 
-                    secondary="View past interview records"
-                  />
-                  <ListItemSecondaryAction>
-                    <Button
-                      variant="outlined"
-                      startIcon={<HistoryIcon />}
-                      onClick={handleViewHistory}
-                    >
-                      View
-                    </Button>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              </List>
-            </Paper>
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={4}>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/admin/create')}
+              sx={{ height: '100%', py: 2 }}
+            >
+              Create New Interview Date
+            </Button>
           </Grid>
+          <Grid item xs={12} sm={4}>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<PeopleIcon />}
+              onClick={() => navigate('/admin/interviewees')}
+              sx={{ height: '100%', py: 2 }}
+            >
+              View All Interviewees
+            </Button>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<HistoryIcon />}
+              onClick={() => navigate('/admin/interviewees')}
+              sx={{ height: '100%', py: 2 }}
+            >
+              View Interview History
+            </Button>
+          </Grid>
+        </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Upcoming Interview Dates
-              </Typography>
-              {interviewDates.length === 0 ? (
-                <Typography color="text.secondary">
-                  No upcoming interview dates scheduled
-                </Typography>
-              ) : (
-                <List>
-                  {interviewDates.map((date) => (
-                    <ListItem key={date.id}>
-                      <ListItemText
-                        primary={new Date(date.date).toLocaleDateString()}
-                        secondary={`${date.startTime} - ${date.endTime}`}
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton
-                          edge="end"
-                          onClick={() => navigate(`/admin/interview/${date.id}`)}
-                        >
-                          <ScheduleIcon />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-            </Paper>
-          </Grid>
+        <Typography variant="h5" gutterBottom>
+          Upcoming Interview Dates
+        </Typography>
+
+        <Grid container spacing={3}>
+          {interviewDates.map((date) => (
+            <Grid item xs={12} key={date.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {formatDate(date.date)}
+                  </Typography>
+                  <Typography color="textSecondary" gutterBottom>
+                    {date.startTime} - {date.endTime}
+                  </Typography>
+                  
+                  <List>
+                    {date.slots.map((slot) => (
+                      <React.Fragment key={slot.id}>
+                        <ListItem>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body1">
+                                  {slot.time}
+                                </Typography>
+                                {slot.isBooked ? (
+                                  <Chip
+                                    label="Booked"
+                                    color="primary"
+                                    size="small"
+                                  />
+                                ) : (
+                                  <Chip
+                                    label="Available"
+                                    color="default"
+                                    size="small"
+                                  />
+                                )}
+                              </Box>
+                            }
+                            secondary={
+                              slot.isBooked && slot.interviewee ? (
+                                <>
+                                  <Typography variant="body2">
+                                    {slot.interviewee.name}
+                                  </Typography>
+                                  <Typography variant="body2" color="textSecondary">
+                                    {slot.interviewee.position}
+                                  </Typography>
+                                  <Typography variant="body2" color="textSecondary">
+                                    {slot.interviewee.phone}
+                                  </Typography>
+                                </>
+                              ) : null
+                            }
+                          />
+                        </ListItem>
+                        <Divider />
+                      </React.Fragment>
+                    ))}
+                  </List>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
         </Grid>
       </Box>
     </Container>

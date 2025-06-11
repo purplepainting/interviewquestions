@@ -8,13 +8,12 @@ import {
   Button,
   Grid,
   Alert,
-  Card,
-  CardContent,
-  CardActions,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  ListItemText,
+  OutlinedInput,
 } from '@mui/material';
 
 interface InterviewDate {
@@ -103,8 +102,17 @@ const ReserveSlot: React.FC = () => {
   const availableSlots = selectedDate
     ? interviewDates
         .find(date => date.id === selectedDate)
-        ?.slots.filter(slot => !slot.isBooked) || []
+        ?.slots || []
     : [];
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   return (
     <Container maxWidth="md">
@@ -142,7 +150,7 @@ const ReserveSlot: React.FC = () => {
                   >
                     {availableDates.map((date) => (
                       <MenuItem key={date.id} value={date.id}>
-                        {new Date(date.date).toLocaleDateString()} ({date.startTime} - {date.endTime})
+                        {formatDate(date.date)} ({date.startTime} - {date.endTime})
                       </MenuItem>
                     ))}
                   </Select>
@@ -160,8 +168,23 @@ const ReserveSlot: React.FC = () => {
                       required
                     >
                       {availableSlots.map((slot) => (
-                        <MenuItem key={slot.id} value={slot.id}>
-                          {slot.time}
+                        <MenuItem 
+                          key={slot.id} 
+                          value={slot.id}
+                          disabled={slot.isBooked}
+                          sx={{
+                            opacity: slot.isBooked ? 0.5 : 1,
+                            backgroundColor: slot.isBooked ? '#f5f5f5' : 'inherit',
+                          }}
+                        >
+                          <ListItemText
+                            primary={slot.time}
+                            secondary={
+                              slot.isBooked && slot.interviewee
+                                ? `Booked by ${slot.interviewee.name}`
+                                : 'Available'
+                            }
+                          />
                         </MenuItem>
                       ))}
                     </Select>
