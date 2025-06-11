@@ -26,9 +26,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  List,
-  ListItem,
-  ListItemText,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -36,7 +33,6 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PersonIcon from '@mui/icons-material/Person';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import SummarizeIcon from '@mui/icons-material/Summarize';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigate } from 'react-router-dom';
 
 interface InterviewDate {
@@ -75,17 +71,12 @@ const InterviewHistory: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedDates = localStorage.getItem('interviewDates');
-    if (storedDates) {
-      const dates = JSON.parse(storedDates);
-      // Filter out future dates and sort in descending order
-      const pastDates = dates.filter((date: InterviewDate) => 
-        new Date(date.date) < new Date()
-      ).sort((a: InterviewDate, b: InterviewDate) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-      setInterviewDates(pastDates);
-    }
+    const dates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
+    // Sort dates in descending order (most recent first)
+    const sortedDates = dates.sort((a: InterviewDate, b: InterviewDate) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    setInterviewDates(sortedDates);
   }, []);
 
   const handleEdit = (slot: InterviewSlot) => {
@@ -146,9 +137,7 @@ const InterviewHistory: React.FC = () => {
       interviewee: {
         name,
         phone,
-        position,
-        confirmed: false,
-        interviewCompleted: false
+        position
       }
     };
 
@@ -158,8 +147,7 @@ const InterviewHistory: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -168,7 +156,7 @@ const InterviewHistory: React.FC = () => {
   };
 
   const handleViewDetails = (dateId: string) => {
-    navigate(`/admin/interviewees?date=${dateId}`);
+    navigate(`/admin/history/${dateId}`);
   };
 
   const handleViewSummary = (slot: InterviewSlot) => {
@@ -178,141 +166,148 @@ const InterviewHistory: React.FC = () => {
     }
   };
 
-  const getBookedSlotsCount = (date: InterviewDate) => {
-    return date.slots.filter(slot => slot.isBooked).length;
-  };
-
-  const copyReservationLink = (dateId: string) => {
-    const link = `${window.location.origin}/reserve?date=${dateId}`;
-    navigator.clipboard.writeText(link);
-  };
-
-  const handleDeleteDate = (dateId: string) => {
-    if (window.confirm('Are you sure you want to delete this interview date?')) {
-      const storedDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
-      const updatedDates = storedDates.filter((date: InterviewDate) => date.id !== dateId);
-      localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
-      setInterviewDates(updatedDates.filter((date: InterviewDate) => 
-        new Date(date.date) < new Date()
-      ).sort((a: InterviewDate, b: InterviewDate) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      ));
-    }
-  };
-
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Interview History
-      </Typography>
-      <Paper sx={{ p: 2 }}>
-        {interviewDates.length > 0 ? (
-          <List>
-            {interviewDates.map((date) => (
-              <ListItem 
-                key={date.id}
-                secondaryAction={
-                  <IconButton 
-                    edge="end" 
-                    aria-label="delete"
-                    onClick={() => handleDeleteDate(date.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                }
-              >
-                <ListItemText
-                  primary={
-                    <Typography
-                      sx={{ 
-                        cursor: 'pointer',
-                        '&:hover': { textDecoration: 'underline' },
-                        color: 'primary.main'
-                      }}
-                      onClick={() => navigate(`/admin/interviewees?date=${date.id}`)}
-                    >
+    <Container maxWidth="lg">
+      <Box sx={{ my: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom align="center" color="primary">
+          Interview History
+        </Typography>
+
+        <Grid container spacing={3}>
+          {interviewDates.map((date) => (
+            <Grid item xs={12} key={date.id}>
+              <Card elevation={2}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" color="primary">
                       {formatDate(date.date)}
                     </Typography>
-                  }
-                  secondary={`${getBookedSlotsCount(date)} slots booked`}
-                />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TextField
-                    size="small"
-                    value={`${window.location.origin}/reserve?date=${date.id}`}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <IconButton
-                    size="small"
-                    onClick={() => copyReservationLink(date.id)}
-                  >
-                    <ContentCopyIcon />
-                  </IconButton>
-                </Box>
-              </ListItem>
-            ))}
-          </List>
-        ) : (
-          <Typography color="text.secondary">No interview history available</Typography>
-        )}
-      </Paper>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Chip
+                        label={`${date.slots.filter(s => s.isBooked).length} Interviews`}
+                        color="primary"
+                        variant="outlined"
+                      />
+                      <Tooltip title="View Details">
+                        <IconButton
+                          color="primary"
+                          onClick={() => handleViewDetails(date.id)}
+                        >
+                          <VisibilityIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Box>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Interview</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Time"
-                value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
-                required
-              />
+                  <TableContainer component={Paper} sx={{ mt: 2 }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Time</TableCell>
+                          <TableCell>Name</TableCell>
+                          <TableCell>Position</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {date.slots
+                          .filter(slot => slot.isBooked && slot.interviewee)
+                          .map((slot) => (
+                            <TableRow key={slot.id}>
+                              <TableCell>{slot.time}</TableCell>
+                              <TableCell>{slot.interviewee?.name}</TableCell>
+                              <TableCell>{slot.interviewee?.position}</TableCell>
+                              <TableCell>
+                                {slot.interviewee?.interviewCompleted ? (
+                                  <Chip label="Completed" color="success" size="small" />
+                                ) : slot.interviewee?.confirmed ? (
+                                  <Chip label="Confirmed" color="primary" size="small" />
+                                ) : (
+                                  <Chip label="Pending" color="warning" size="small" />
+                                )}
+                              </TableCell>
+                              <TableCell align="right">
+                                {slot.interviewee?.interviewCompleted && (
+                                  <Tooltip title="View Summary">
+                                    <IconButton
+                                      size="small"
+                                      color="primary"
+                                      onClick={() => handleViewSummary(slot)}
+                                    >
+                                      <SummarizeIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </CardContent>
+              </Card>
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+          ))}
+        </Grid>
+
+        <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>Edit Interview</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Time"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Phone Number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth required>
+                  <InputLabel>Position</InputLabel>
+                  <Select
+                    value={position}
+                    label="Position"
+                    onChange={(e) => setPosition(e.target.value)}
+                  >
+                    {POSITIONS.map((pos) => (
+                      <MenuItem key={pos} value={pos}>
+                        {pos}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Phone Number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel>Position</InputLabel>
-                <Select
-                  value={position}
-                  label="Position"
-                  onChange={(e) => setPosition(e.target.value)}
-                >
-                  {POSITIONS.map((pos) => (
-                    <MenuItem key={pos} value={pos}>
-                      {pos}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained">
-            Save Changes
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button onClick={handleSave} variant="contained">
+              Save Changes
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     </Container>
   );
 };

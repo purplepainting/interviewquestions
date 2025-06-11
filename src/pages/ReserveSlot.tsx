@@ -96,19 +96,20 @@ const ReserveSlot: React.FC = () => {
       return;
     }
 
-    // Get all dates from localStorage
-    const allDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
-    
-    // Find the date and slot in the full list
-    const dateIndex = allDates.findIndex((d: InterviewDate) => d.id === selectedDate?.id);
+    const dateIndex = interviewDates.findIndex(d => 
+      d.slots.some(s => s.id === selectedSlot.id)
+    );
     if (dateIndex === -1) return;
 
-    const slotIndex = allDates[dateIndex].slots.findIndex(s => s.id === selectedSlot.id);
+    const slotIndex = interviewDates[dateIndex].slots.findIndex(s => s.id === selectedSlot.id);
     if (slotIndex === -1) return;
 
-    // Update the slot in the full list
-    allDates[dateIndex].slots[slotIndex] = {
-      ...allDates[dateIndex].slots[slotIndex],
+    // Create a copy of the dates array
+    const updatedDates = [...interviewDates];
+    
+    // Update the slot
+    updatedDates[dateIndex].slots[slotIndex] = {
+      ...updatedDates[dateIndex].slots[slotIndex],
       isBooked: true,
       interviewee: {
         name,
@@ -117,11 +118,9 @@ const ReserveSlot: React.FC = () => {
       }
     };
 
-    // Save the updated full list back to localStorage
-    localStorage.setItem('interviewDates', JSON.stringify(allDates));
-    
-    // Update the local state with the filtered date
-    setInterviewDates([allDates[dateIndex]]);
+    // Save to localStorage
+    localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
+    setInterviewDates(updatedDates);
     
     // Reset form and show success
     handleCloseDialog();

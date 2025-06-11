@@ -40,19 +40,18 @@ const CreateInterview: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const generateTimeSlots = (start: string, end: string): InterviewSlot[] => {
-    const slots: InterviewSlot[] = [];
+  const generateTimeSlots = (start: string, end: string) => {
+    const slots = [];
     const [startHour, startMinute] = start.split(':').map(Number);
     const [endHour, endMinute] = end.split(':').map(Number);
     
     let currentHour = startHour;
     let currentMinute = startMinute;
-    let slotIndex = 0;
     
     while (currentHour < endHour || (currentHour === endHour && currentMinute <= endMinute)) {
       const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
       slots.push({
-        id: `slot-${Date.now()}-${slotIndex}`,
+        id: `${date?.toISOString()}-${timeString}`,
         time: timeString,
         isBooked: false
       });
@@ -62,7 +61,6 @@ const CreateInterview: React.FC = () => {
         currentHour += 1;
         currentMinute = 0;
       }
-      slotIndex++;
     }
     
     return slots;
@@ -79,7 +77,7 @@ const CreateInterview: React.FC = () => {
     const slots = generateTimeSlots(startTime, endTime);
     
     const newInterviewDate = {
-      id: `date-${Date.now()}`,
+      id: date.toISOString(),
       date: date.toISOString(),
       startTime,
       endTime,

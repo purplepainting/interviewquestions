@@ -81,23 +81,15 @@ const IntervieweeList: React.FC = () => {
   const dateId = searchParams.get('date');
   const [showSummary, setShowSummary] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
-    setError(null);
-    
-    console.log('Date ID from URL:', dateId);
     const dates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
-    console.log('All dates from localStorage:', dates);
+    const history = JSON.parse(localStorage.getItem('interviewHistory') || '[]');
     
     if (dateId) {
       const currentDate = dates.find((d: any) => d.id === dateId);
-      console.log('Found date:', currentDate);
-      
       if (currentDate) {
-        const allInterviews = [...dates];
+        const allInterviews = [...dates, ...history];
         const currentSlots = currentDate.slots.map((slot: any) => {
           if (slot.interviewee) {
             const isDuplicate = allInterviews.some((date: any) => {
@@ -114,21 +106,12 @@ const IntervieweeList: React.FC = () => {
           return slot;
         });
         setInterviewDates([{ ...currentDate, slots: currentSlots }]);
-      } else {
-        setError('Interview date not found');
       }
-    } else {
-      setError('No date specified');
     }
-    setIsLoading(false);
   }, [dateId]);
 
   const handleEdit = (slot: InterviewSlot) => {
     setEditingSlot(slot);
-    setName(slot.interviewee?.name || '');
-    setPhone(slot.interviewee?.phone || '');
-    setPosition(slot.interviewee?.position || '');
-    setNewTime(slot.time);
     setOpenEditDialog(true);
   };
 
@@ -145,19 +128,17 @@ const IntervieweeList: React.FC = () => {
   };
 
   const handleDeleteInterviewee = (slot: InterviewSlot) => {
-    if (window.confirm('Are you sure you want to delete this interviewee?')) {
-      const updatedDates = interviewDates.map(date => ({
-        ...date,
-        slots: date.slots.map(s => {
-          if (s.id === slot.id) {
-            return { ...s, isBooked: false, interviewee: undefined };
-          }
-          return s;
-        })
-      }));
-      setInterviewDates(updatedDates);
-      localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
-    }
+    const updatedDates = interviewDates.map(date => ({
+      ...date,
+      slots: date.slots.map(s => {
+        if (s.id === slot.id) {
+          return { ...s, isBooked: false, interviewee: undefined };
+        }
+        return s;
+      })
+    }));
+    setInterviewDates(updatedDates);
+    localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
   };
 
   const handleConfirmAttendance = (slot: InterviewSlot) => {
@@ -244,58 +225,39 @@ const IntervieweeList: React.FC = () => {
   const handleSaveEdit = () => {
     if (!editingSlot) return;
 
-    // Get all dates from localStorage
-    const allDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
-    
-    // Find the date and slot in the full list
-    const dateIndex = allDates.findIndex((d: InterviewDate) => d.id === interviewDates[0].id);
+    const dateIndex = interviewDates.findIndex(d => 
+      d.slots.some(s => s.id === editingSlot.id)
+    );
     if (dateIndex === -1) return;
 
-    const slotIndex = allDates[dateIndex].slots.findIndex(s => s.id === editingSlot.id);
+    const slotIndex = interviewDates[dateIndex].slots.findIndex(s => s.id === editingSlot.id);
     if (slotIndex === -1) return;
 
-    // Update the slot in the full list
-    allDates[dateIndex].slots[slotIndex] = {
-      ...allDates[dateIndex].slots[slotIndex],
-      time: newTime,
+    const updatedDates = [...interviewDates];
+    const oldTime = updatedDates[dateIndex].slots[slotIndex].time;
+    const newSlotIndex = updatedDates[dateIndex].slots.findIndex(s => s.time === newTime);
+
+    // Clear the old slot
+    updatedDates[dateIndex].slots[slotIndex] = {
+      ...updatedDates[dateIndex].slots[slotIndex],
+      isBooked: false,
+      interviewee: undefined
+    };
+
+    // Update the new slot
+    updatedDates[dateIndex].slots[newSlotIndex] = {
+      ...updatedDates[dateIndex].slots[newSlotIndex],
+      isBooked: true,
       interviewee: {
         name,
         phone,
         position,
-        confirmed: editingSlot.interviewee?.confirmed || false,
-        interviewCompleted: editingSlot.interviewee?.interviewCompleted || false,
-        interviewData: editingSlot.interviewee?.interviewData,
-        rating: editingSlot.interviewee?.rating,
-        startRate: editingSlot.interviewee?.startRate
+        confirmed: false,
+        interviewCompleted: false
       }
     };
 
-    // Save the updated full list back to localStorage
-    localStorage.setItem('interviewDates', JSON.stringify(allDates));
-
-    // Update the local state with just the filtered date
-    const updatedDates = interviewDates.map(date => ({
-      ...date,
-      slots: date.slots.map(s => {
-        if (s.id === editingSlot.id) {
-          return {
-            ...s,
-            time: newTime,
-            interviewee: {
-              name,
-              phone,
-              position,
-              confirmed: s.interviewee?.confirmed || false,
-              interviewCompleted: s.interviewee?.interviewCompleted || false,
-              interviewData: s.interviewee?.interviewData,
-              rating: s.interviewee?.rating,
-              startRate: s.interviewee?.startRate
-            }
-          };
-        }
-        return s;
-      })
-    }));
+    localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
     setInterviewDates(updatedDates);
     handleCloseEditDialog();
   };
@@ -305,12 +267,10 @@ const IntervieweeList: React.FC = () => {
   };
 
   const handleDeleteSession = () => {
-    if (window.confirm('Are you sure you want to delete this interview session?')) {
-      const allDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
-      const updatedDates = allDates.filter((d: InterviewDate) => d.id !== dateId);
-      localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
-      navigate('/admin');
-    }
+    const dates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
+    const updatedDates = dates.filter((date: InterviewDate) => date.id !== dateId);
+    localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
+    navigate('/admin');
   };
 
   const formatDate = (dateString: string) => {
@@ -322,346 +282,320 @@ const IntervieweeList: React.FC = () => {
     });
   };
 
-  if (isLoading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Typography>Loading...</Typography>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Typography color="error">{error}</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => navigate('/admin')}
-          sx={{ mt: 2 }}
-        >
-          Back to Dashboard
-        </Button>
-      </Container>
-    );
-  }
-
-  if (interviewDates.length === 0) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Typography>No interview date found</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => navigate('/admin')}
-          sx={{ mt: 2 }}
-        >
-          Back to Dashboard
-        </Button>
-      </Container>
-    );
-  }
-
-  const currentDate = interviewDates[0];
-  const bookedSlots = currentDate.slots.filter(slot => slot.isBooked);
-  const completedInterviews = bookedSlots.filter(slot => 
-    slot.interviewee?.interviewCompleted
-  );
-
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h5" component="h2">
-                {formatDate(currentDate.date)}
-              </Typography>
-              <Box>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<SummarizeIcon />}
-                  onClick={handleViewSummary}
-                  sx={{ mr: 1 }}
-                >
-                  View Summary
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  startIcon={<DeleteIcon />}
-                  onClick={handleDeleteSession}
-                >
-                  Delete Session
-                </Button>
-              </Box>
-            </Box>
-            <Typography variant="subtitle1" gutterBottom>
-              {bookedSlots.length} slots booked
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12}>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Time</TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Phone</TableCell>
-                  <TableCell>Position</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {currentDate.slots.map((slot) => (
-                  <TableRow key={slot.id}>
-                    <TableCell>{slot.time}</TableCell>
-                    <TableCell>
-                      {slot.isBooked ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {slot.interviewee?.name}
-                          {slot.interviewee?.isDuplicate && (
-                            <Chip
-                              label="Duplicate"
-                              color="warning"
-                              size="small"
-                            />
-                          )}
-                        </Box>
-                      ) : (
-                        'Available'
-                      )}
-                    </TableCell>
-                    <TableCell>{slot.interviewee?.phone || '-'}</TableCell>
-                    <TableCell>{slot.interviewee?.position || '-'}</TableCell>
-                    <TableCell>
-                      {slot.isBooked && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {slot.interviewee?.confirmed ? (
-                            <Chip
-                              icon={<CheckCircleIcon />}
-                              label="Confirmed"
-                              color="success"
-                              size="small"
-                            />
-                          ) : (
-                            <Chip
-                              icon={<CancelIcon />}
-                              label="Not Confirmed"
-                              color="error"
-                              size="small"
-                            />
-                          )}
-                          {slot.interviewee?.interviewCompleted && (
-                            <Chip
-                              icon={<StarIcon />}
-                              label="Completed"
-                              color="primary"
-                              size="small"
-                            />
-                          )}
-                        </Box>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {slot.isBooked ? (
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Tooltip title="Edit">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEdit(slot)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDeleteInterviewee(slot)}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                          {!slot.interviewee?.confirmed && (
-                            <Tooltip title="Confirm Attendance">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleConfirmAttendance(slot)}
-                              >
-                                <CheckCircleIcon />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          {slot.interviewee?.confirmed && !slot.interviewee?.interviewCompleted && (
-                            <Tooltip title="Start Interview">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleStartInterview(slot)}
-                              >
-                                <PlayArrowIcon />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </Box>
-                      ) : (
-                        <Typography color="text.secondary">-</Typography>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Grid>
-      </Grid>
-
-      {/* Edit Dialog */}
-      <Dialog open={openEditDialog} onClose={handleCloseEditDialog}>
-        <DialogTitle>Edit Interviewee</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-            <TextField
-              label="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="Phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              fullWidth
-            />
-            <FormControl fullWidth>
-              <InputLabel>Position</InputLabel>
-              <Select
-                value={position}
-                label="Position"
-                onChange={(e) => setPosition(e.target.value)}
-              >
-                {POSITIONS.map((pos) => (
-                  <MenuItem key={pos} value={pos}>
-                    {pos}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>Time Slot</InputLabel>
-              <Select
-                value={newTime}
-                label="Time Slot"
-                onChange={(e) => setNewTime(e.target.value)}
-              >
-                {getAvailableTimeSlots(editingSlot!).map((time) => (
-                  <MenuItem key={time} value={time}>
-                    {time}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+    <Container maxWidth="lg">
+      <Box sx={{ my: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography variant="h4" component="h1" color="primary">
+            Interview List
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<SummarizeIcon />}
+              onClick={handleViewSummary}
+            >
+              View Session Summary
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={() => setDeleteConfirmOpen(true)}
+            >
+              Delete Session
+            </Button>
           </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseEditDialog}>Cancel</Button>
-          <Button onClick={handleSaveEdit} variant="contained">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
 
-      {/* Interview Form Dialog */}
-      <Dialog
-        open={openInterviewDialog}
-        onClose={() => setOpenInterviewDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Interview Form</DialogTitle>
-        <DialogContent>
-          {editingSlot && (
-            <InterviewForm
-              initialData={editingSlot.interviewee?.interviewData}
-              interviewDate={currentDate.date}
-              onComplete={handleInterviewComplete}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Summary Dialog */}
-      <Dialog
-        open={showSummary}
-        onClose={() => setShowSummary(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Interview Summary</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <Card>
+        <Grid container spacing={3}>
+          {interviewDates.map((date) => (
+            <Grid item xs={12} key={date.id}>
+              <Card elevation={2}>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Overview
+                  <Typography variant="h6" gutterBottom color="primary">
+                    {formatDate(date.date)}
                   </Typography>
-                  <Typography>
-                    Total Slots: {currentDate.slots.length}
+                  <Typography color="textSecondary" gutterBottom>
+                    {date.startTime} - {date.endTime}
                   </Typography>
-                  <Typography>
-                    Booked Slots: {bookedSlots.length}
-                  </Typography>
-                  <Typography>
-                    Completed Interviews: {completedInterviews.length}
-                  </Typography>
+
+                  <TableContainer component={Paper} sx={{ mt: 2 }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Time</TableCell>
+                          <TableCell>Name</TableCell>
+                          <TableCell>Phone</TableCell>
+                          <TableCell>Position</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {date.slots
+                          .filter(slot => slot.isBooked && slot.interviewee)
+                          .map((slot) => (
+                            <TableRow key={slot.id}>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <AccessTimeIcon color="primary" fontSize="small" />
+                                  {slot.time}
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  {slot.interviewee?.name}
+                                  {slot.interviewee?.isDuplicate && (
+                                    <Chip
+                                      label="Previous Applicant"
+                                      color="warning"
+                                      size="small"
+                                    />
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>{slot.interviewee?.phone}</TableCell>
+                              <TableCell>{slot.interviewee?.position}</TableCell>
+                              <TableCell>
+                                {slot.interviewee?.interviewCompleted ? (
+                                  <Chip label="Completed" color="success" size="small" />
+                                ) : slot.interviewee?.confirmed ? (
+                                  <Chip label="Confirmed" color="primary" size="small" />
+                                ) : (
+                                  <Chip label="Pending" color="warning" size="small" />
+                                )}
+                              </TableCell>
+                              <TableCell align="right">
+                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                  {!slot.interviewee?.interviewCompleted && (
+                                    <>
+                                      {!slot.interviewee?.confirmed ? (
+                                        <Tooltip title="Confirm Attendance">
+                                          <IconButton
+                                            size="small"
+                                            color="success"
+                                            onClick={() => handleConfirmAttendance(slot)}
+                                          >
+                                            <CheckCircleIcon />
+                                          </IconButton>
+                                        </Tooltip>
+                                      ) : (
+                                        <Tooltip title="Cancel Attendance">
+                                          <IconButton
+                                            size="small"
+                                            color="error"
+                                            onClick={() => handleCancelAttendance(slot)}
+                                          >
+                                            <CancelIcon />
+                                          </IconButton>
+                                        </Tooltip>
+                                      )}
+                                      <Tooltip title="Start Interview">
+                                        <IconButton
+                                          size="small"
+                                          color="primary"
+                                          onClick={() => handleStartInterview(slot)}
+                                        >
+                                          <PlayArrowIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </>
+                                  )}
+                                  <Tooltip title="Edit Interview">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleEdit(slot)}
+                                    >
+                                      <EditIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete Interview">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleDeleteInterviewee(slot)}
+                                    >
+                                      <DeleteIcon />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 </CardContent>
               </Card>
             </Grid>
-            {completedInterviews.length > 0 && (
+          ))}
+        </Grid>
+
+        <Dialog open={openEditDialog} onClose={handleCloseEditDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>Edit Interview</DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      Completed Interviews
-                    </Typography>
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Time</TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Position</TableCell>
-                            <TableCell>Rating</TableCell>
-                            <TableCell>Start Rate</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {completedInterviews.map((slot) => (
-                            <TableRow key={slot.id}>
-                              <TableCell>{slot.time}</TableCell>
-                              <TableCell>{slot.interviewee?.name}</TableCell>
-                              <TableCell>{slot.interviewee?.position}</TableCell>
-                              <TableCell>{slot.interviewee?.rating || '-'}</TableCell>
-                              <TableCell>{slot.interviewee?.startRate || '-'}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </CardContent>
-                </Card>
+                <FormControl fullWidth required>
+                  <InputLabel>Available Time Slots</InputLabel>
+                  <Select
+                    value={newTime}
+                    label="Available Time Slots"
+                    onChange={(e) => setNewTime(e.target.value)}
+                  >
+                    {editingSlot && getAvailableTimeSlots(editingSlot).map((time) => (
+                      <MenuItem key={time} value={time}>
+                        {time}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Phone Number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth required>
+                  <InputLabel>Position</InputLabel>
+                  <Select
+                    value={position}
+                    label="Position"
+                    onChange={(e) => setPosition(e.target.value)}
+                  >
+                    {POSITIONS.map((pos) => (
+                      <MenuItem key={pos} value={pos}>
+                        {pos}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseEditDialog}>Cancel</Button>
+            <Button onClick={handleSaveEdit} variant="contained">
+              Save Changes
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={openInterviewDialog} onClose={() => setOpenInterviewDialog(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Interview Form</DialogTitle>
+          <DialogContent>
+            {editingSlot && editingSlot.interviewee && (
+              <InterviewForm
+                initialData={editingSlot.interviewee.interviewData}
+                interviewDate={interviewDates[0]?.date}
+                onComplete={(data) => {
+                  const updatedSlots = interviewDates[0].slots.map(s => {
+                    if (s.id === editingSlot.id) {
+                      return {
+                        ...s,
+                        interviewee: {
+                          ...s.interviewee,
+                          interviewCompleted: true,
+                          interviewData: data,
+                          rating: data.rating
+                        }
+                      };
+                    }
+                    return s;
+                  });
+
+                  const updatedDates = [...interviewDates];
+                  updatedDates[0].slots = updatedSlots;
+                  setInterviewDates(updatedDates);
+                  localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
+                  setOpenInterviewDialog(false);
+                }}
+              />
             )}
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowSummary(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={showSummary}
+          onClose={() => setShowSummary(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>Interview Session Summary</DialogTitle>
+          <DialogContent>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Position</TableCell>
+                    <TableCell>Desired Rate</TableCell>
+                    <TableCell>Rating</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {interviewDates[0]?.slots
+                    .filter(slot => slot.isBooked && slot.interviewee)
+                    .sort((a, b) => {
+                      const ratingA = a.interviewee?.rating || 0;
+                      const ratingB = b.interviewee?.rating || 0;
+                      return ratingB - ratingA;
+                    })
+                    .map((slot, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{slot.interviewee?.name}</TableCell>
+                        <TableCell>{slot.interviewee?.position}</TableCell>
+                        <TableCell>{slot.interviewee?.startRate || 'Not specified'}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {slot.interviewee?.rating || 'Not rated'}
+                            {slot.interviewee?.rating && <StarIcon sx={{ color: 'gold', ml: 0.5 }} />}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowSummary(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={deleteConfirmOpen}
+          onClose={() => setDeleteConfirmOpen(false)}
+        >
+          <DialogTitle>Delete Interview Session</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Are you sure you want to delete this interview session? This action cannot be undone.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={handleDeleteSession} color="error">
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     </Container>
   );
 };

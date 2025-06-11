@@ -72,42 +72,63 @@ const AdminLanding: React.FC = () => {
   const [interviewHistory, setInterviewHistory] = useState<InterviewDate[]>([]);
 
   useEffect(() => {
-    const storedDates = localStorage.getItem('interviewDates');
-    if (storedDates) {
-      const dates = JSON.parse(storedDates);
-      // Filter for today and future dates, and sort in ascending order
-      const upcomingDates = dates
-        .filter((date: InterviewDate) => {
-          const interviewDate = new Date(date.date);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          return interviewDate >= today;
-        })
-        .sort((a: InterviewDate, b: InterviewDate) => 
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-      setInterviewDates(upcomingDates);
-    }
+    const storedDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Filter upcoming interviews (today and future)
+    const upcoming = storedDates.filter((date: InterviewDate) => {
+      const interviewDate = new Date(date.date);
+      interviewDate.setHours(0, 0, 0, 0);
+      return interviewDate >= today;
+    });
+    
+    // Filter past interviews (before today)
+    const past = storedDates.filter((date: InterviewDate) => {
+      const interviewDate = new Date(date.date);
+      interviewDate.setHours(0, 0, 0, 0);
+      return interviewDate < today;
+    });
+    
+    setInterviewDates(upcoming);
+    setPastInterviewDates(past);
+
+    // Get all interviews from history
+    const history = JSON.parse(localStorage.getItem('interviewHistory') || '[]');
+    
+    // Check both current and past interviews for top candidates
+    const shortlisted: ShortlistedCandidate[] = [];
+    [...upcoming, ...past].forEach((date: InterviewDate) => {
+      if (date.slots) {
+        date.slots.forEach((slot: any) => {
+          if (slot.interviewee && slot.interviewee.rating >= 4) {
+            shortlisted.push({
+              name: slot.interviewee.name,
+              position: slot.interviewee.position,
+              startRate: slot.interviewee.startRate,
+              phone: slot.interviewee.phone,
+              rating: slot.interviewee.rating,
+              interviewDate: date.date
+            });
+          }
+        });
+      }
+    });
+
+    // Sort by rating (highest first) and then by date (most recent first)
+    shortlisted.sort((a, b) => {
+      if (b.rating !== a.rating) return b.rating - a.rating;
+      return new Date(b.interviewDate).getTime() - new Date(a.interviewDate).getTime();
+    });
+
+    setShortlistedCandidates(shortlisted);
   }, []);
 
   const handleDeleteDate = (dateId: string) => {
     if (window.confirm('Are you sure you want to delete this interview date?')) {
-      const storedDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
-      const updatedDates = storedDates.filter((date: InterviewDate) => date.id !== dateId);
+      const updatedDates = interviewDates.filter(date => date.id !== dateId);
       localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
-      
-      // Update both upcoming and past dates
-      const upcomingDates = updatedDates
-        .filter((date: InterviewDate) => {
-          const interviewDate = new Date(date.date);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          return interviewDate >= today;
-        })
-        .sort((a: InterviewDate, b: InterviewDate) => 
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-      setInterviewDates(upcomingDates);
+      setInterviewDates(updatedDates);
     }
   };
 
@@ -134,14 +155,6 @@ const AdminLanding: React.FC = () => {
     navigate('/admin/create');
   };
 
-  const handleClearAllDates = () => {
-    if (window.confirm('Are you sure you want to clear all interview dates? This cannot be undone.')) {
-      localStorage.removeItem('interviewDates');
-      setInterviewDates([]);
-      setPastInterviewDates([]);
-    }
-  };
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Grid container spacing={3}>
@@ -163,15 +176,6 @@ const AdminLanding: React.FC = () => {
             <Button
               variant="outlined"
               color="primary"
-              startIcon={<StarIcon />}
-              onClick={() => navigate('/admin/top-candidates')}
-              sx={{ mb: 2 }}
-            >
-              View Top Candidates
-            </Button>
-            <Button
-              variant="outlined"
-              color="primary"
               startIcon={<HistoryIcon />}
               onClick={() => navigate('/admin/history')}
               sx={{ mb: 2 }}
@@ -180,11 +184,12 @@ const AdminLanding: React.FC = () => {
             </Button>
             <Button
               variant="outlined"
-              color="error"
-              onClick={handleClearAllDates}
+              color="primary"
+              startIcon={<StarIcon />}
+              onClick={() => navigate('/admin/top-candidates')}
               sx={{ mb: 2 }}
             >
-              Clear All Dates
+              View Top Candidates
             </Button>
           </Paper>
         </Grid>
@@ -198,18 +203,7 @@ const AdminLanding: React.FC = () => {
             {interviewDates.length > 0 ? (
               <List>
                 {interviewDates.map((date) => (
-                  <ListItem 
-                    key={date.id}
-                    secondaryAction={
-                      <IconButton 
-                        edge="end" 
-                        aria-label="delete"
-                        onClick={() => handleDeleteDate(date.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    }
-                  >
+                  <ListItem key={date.id}>
                     <ListItemText
                       primary={
                         <Typography
@@ -243,6 +237,40 @@ const AdminLanding: React.FC = () => {
               </List>
             ) : (
               <Typography color="text.secondary">No upcoming interviews scheduled</Typography>
+            )}
+          </Paper>
+        </Grid>
+
+        {/* Interview History */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" gutterBottom>
+              Interview History
+            </Typography>
+            {pastInterviewDates.length > 0 ? (
+              <List>
+                {pastInterviewDates.map((date) => (
+                  <ListItem key={date.id}>
+                    <ListItemText
+                      primary={
+                        <Typography
+                          sx={{ 
+                            cursor: 'pointer',
+                            '&:hover': { textDecoration: 'underline' },
+                            color: 'primary.main'
+                          }}
+                          onClick={() => navigate(`/admin/interviewees?date=${date.id}`)}
+                        >
+                          {formatDate(date.date)}
+                        </Typography>
+                      }
+                      secondary={`${getBookedSlotsCount(date)} slots booked`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography color="text.secondary">No past interviews</Typography>
             )}
           </Paper>
         </Grid>
