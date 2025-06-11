@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
   Typography,
-  Paper,
   TextField,
   Button,
   Grid,
+  Paper,
   Alert,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 
 interface InterviewDate {
   id: string;
@@ -32,27 +34,27 @@ interface InterviewSlot {
 
 const CreateInterview: React.FC = () => {
   const navigate = useNavigate();
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState<Date | null>(null);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const generateTimeSlots = (start: string, end: string): string[] => {
-    const slots: string[] = [];
+  const generateTimeSlots = (start: string, end: string): InterviewSlot[] => {
+    const slots: InterviewSlot[] = [];
     const [startHour, startMinute] = start.split(':').map(Number);
     const [endHour, endMinute] = end.split(':').map(Number);
     
     let currentHour = startHour;
     let currentMinute = startMinute;
     
-    while (
-      currentHour < endHour || 
-      (currentHour === endHour && currentMinute <= endMinute)
-    ) {
-      slots.push(
-        `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
-      );
+    while (currentHour < endHour || (currentHour === endHour && currentMinute <= endMinute)) {
+      const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+      slots.push({
+        id: `slot-${Date.now()}-${timeString}`,
+        time: timeString,
+        isBooked: false
+      });
       
       currentMinute += 15;
       if (currentMinute >= 60) {
@@ -72,119 +74,94 @@ const CreateInterview: React.FC = () => {
       return;
     }
 
-    try {
-      const slots = generateTimeSlots(startTime, endTime).map(time => ({
-        id: `${Date.now()}-${time}`,
-        time,
-        isBooked: false
-      }));
+    const slots = generateTimeSlots(startTime, endTime);
+    
+    const newInterviewDate = {
+      id: `date-${Date.now()}`,
+      date: date.toISOString(),
+      startTime,
+      endTime,
+      slots
+    };
 
-      const newInterviewDate: InterviewDate = {
-        id: Date.now().toString(),
-        date,
-        startTime,
-        endTime,
-        slots
-      };
+    const existingDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
+    const updatedDates = [...existingDates, newInterviewDate];
+    
+    localStorage.setItem('interviewDates', JSON.stringify(updatedDates));
 
-      // Get existing dates
-      const existingDates = JSON.parse(localStorage.getItem('interviewDates') || '[]');
-      
-      // Add new date
-      localStorage.setItem('interviewDates', JSON.stringify([...existingDates, newInterviewDate]));
+    setSuccess(true);
+    setError('');
 
-      // Show success message
-      setSuccess(true);
-      setError('');
-
-      // Reset form
-      setDate('');
-      setStartTime('');
-      setEndTime('');
-
-      // Navigate back to admin page after 2 seconds
-      setTimeout(() => {
-        navigate('/admin');
-      }, 2000);
-    } catch (err) {
-      setError('An error occurred while saving the interview date. Please try again.');
-    }
+    setTimeout(() => {
+      navigate('/admin');
+    }, 2000);
   };
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="sm">
       <Box sx={{ my: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          Create New Interview Date
+        <Typography variant="h4" component="h1" gutterBottom align="center" color="primary">
+          Create Interview Date
         </Typography>
 
-        <Paper sx={{ p: 3, mt: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Interview date created successfully! Redirecting to admin page...
-            </Alert>
-          )}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Interview date created successfully! Redirecting to admin page...
+          </Alert>
+        )}
 
+        <Paper elevation={2} sx={{ p: 3 }}>
           <form onSubmit={handleSubmit}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  type="date"
-                  label="Interview Date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                />
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label="Interview Date"
+                    value={date}
+                    onChange={(newDate) => setDate(newDate)}
+                    sx={{ width: '100%' }}
+                  />
+                </LocalizationProvider>
               </Grid>
-
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  type="time"
                   label="Start Time"
+                  type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   InputLabelProps={{ shrink: true }}
+                  inputProps={{ step: 300 }}
                   required
                 />
               </Grid>
-
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  type="time"
                   label="End Time"
+                  type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                   InputLabelProps={{ shrink: true }}
+                  inputProps={{ step: 300 }}
                   required
                 />
               </Grid>
-
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => navigate('/admin')}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={success}
-                  >
-                    Create Interview Date
-                  </Button>
-                </Box>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  fullWidth
+                  size="large"
+                >
+                  Create Interview Date
+                </Button>
               </Grid>
             </Grid>
           </form>

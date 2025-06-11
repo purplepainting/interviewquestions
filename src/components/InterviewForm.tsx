@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
 import {
   Box,
-  TextField,
-  FormControl,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
   Typography,
+  TextField,
   Button,
   Grid,
-  Paper,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Radio,
+  RadioGroup,
   Checkbox,
   Select,
   MenuItem,
   InputLabel,
+  Paper,
+  FormGroup,
+  Rating,
+  InputAdornment,
 } from '@mui/material';
+import { SelectChangeEvent } from '@mui/material/Select';
 
 interface InterviewData {
   date: string;
@@ -41,11 +46,13 @@ interface InterviewData {
   firedBefore: 'Yes' | 'No';
   firingReason: string;
   rating: number;
+  notes: string;
 }
 
 interface InterviewFormProps {
   initialData?: any;
   onComplete: (data: any) => void;
+  interviewDate?: string;
 }
 
 const LOCATIONS = [
@@ -56,34 +63,74 @@ const LOCATIONS = [
   'Oxnard'
 ];
 
-const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }) => {
+const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete, interviewDate }) => {
   const [formData, setFormData] = useState<InterviewData>({
-    date: new Date().toISOString().split('T')[0],
-    name: '',
-    phone: '',
-    location: 'Santa Barbara',
-    position: 'Helper',
-    bilingual: 'No',
-    desiredRate: '',
-    startRate: '',
-    experience: 0,
-    previousCompanies: '',
-    skills: {
+    date: interviewDate || new Date().toISOString().split('T')[0],
+    name: initialData?.name || '',
+    phone: initialData?.phone || '',
+    location: initialData?.location || 'Santa Barbara',
+    position: initialData?.position || 'Helper',
+    bilingual: initialData?.bilingual || 'No',
+    desiredRate: initialData?.desiredRate || '',
+    startRate: initialData?.startRate || '',
+    experience: initialData?.experience || 0,
+    previousCompanies: initialData?.previousCompanies || '',
+    skills: initialData?.skills || {
       painting: false,
       staining: false,
       spraying: false,
     },
-    transportation: 'None',
-    hasTools: 'No',
-    okWithPayroll: 'No',
-    felonyConviction: 'No',
-    okWithWeekends: 'No',
-    hobbies: '',
-    firedBefore: 'No',
-    firingReason: '',
-    rating: 0,
+    transportation: initialData?.transportation || 'None',
+    hasTools: initialData?.hasTools || 'No',
+    okWithPayroll: initialData?.okWithPayroll || 'No',
+    felonyConviction: initialData?.felonyConviction || 'No',
+    okWithWeekends: initialData?.okWithWeekends || 'No',
+    hobbies: initialData?.hobbies || '',
+    firedBefore: initialData?.firedBefore || 'No',
+    firingReason: initialData?.firingReason || '',
+    rating: initialData?.rating || 0,
+    notes: initialData?.notes || '',
     ...initialData,
   });
+
+  const [showFiringReason, setShowFiringReason] = useState(false);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>
+  ) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (name === 'firedBefore' && value === 'Yes') {
+      setShowFiringReason(true);
+    } else if (name === 'firedBefore' && value === 'No') {
+      setShowFiringReason(false);
+      setFormData(prev => ({
+        ...prev,
+        firingReason: ''
+      }));
+    }
+  };
+
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSkillsChange = (skill: keyof typeof formData.skills) => (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      skills: { ...prev.skills, [skill]: e.target.checked }
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +139,7 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
 
   return (
     <Paper elevation={3} sx={{ p: 3 }}>
-      <form onSubmit={handleSubmit}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <Typography variant="h6" gutterBottom>
@@ -102,23 +149,44 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
 
           <Grid item xs={12} sm={6}>
             <TextField
-              fullWidth
-              type="date"
-              label="Date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <TextField
+              required
               fullWidth
               label="Name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField
+              required
+              fullWidth
+              label="Phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField
+              required
+              fullWidth
+              label="Position"
+              value={formData.position}
+              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField
+              required
+              fullWidth
+              label="Desired Rate of Pay"
+              type="number"
+              value={formData.startRate}
+              onChange={(e) => setFormData({ ...formData, startRate: e.target.value.toString() })}
               InputProps={{
-                readOnly: Boolean(initialData?.name)
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
               }}
             />
           </Grid>
@@ -126,12 +194,11 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
-              label="Phone Number"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              InputProps={{
-                readOnly: Boolean(initialData?.phone)
-              }}
+              type="date"
+              label="Date"
+              value={formData.date}
+              onChange={handleChange}
+              InputLabelProps={{ shrink: true }}
             />
           </Grid>
 
@@ -141,7 +208,8 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               <Select
                 value={formData.location}
                 label="Location"
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                onChange={handleSelectChange}
+                name="location"
               >
                 {LOCATIONS.map((location) => (
                   <MenuItem key={location} value={location}>
@@ -154,26 +222,11 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
 
           <Grid item xs={12}>
             <FormControl component="fieldset">
-              <Typography variant="subtitle1">Position</Typography>
-              <RadioGroup
-                row
-                value={formData.position}
-                onChange={(e) => setFormData({ ...formData, position: e.target.value as 'Helper' | 'Painter' | 'Foreman' })}
-              >
-                <FormControlLabel value="Helper" control={<Radio />} label="Helper" />
-                <FormControlLabel value="Painter" control={<Radio />} label="Painter" />
-                <FormControlLabel value="Foreman" control={<Radio />} label="Foreman" />
-              </RadioGroup>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12}>
-            <FormControl component="fieldset">
               <Typography variant="subtitle1">Are you Bilingual?</Typography>
               <RadioGroup
                 row
                 value={formData.bilingual}
-                onChange={(e) => setFormData({ ...formData, bilingual: e.target.value as 'Yes' | 'No' })}
+                onChange={handleChange}
               >
                 <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
                 <FormControlLabel value="No" control={<Radio />} label="No" />
@@ -181,30 +234,12 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
             </FormControl>
           </Grid>
 
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Desired Rate of Pay"
-              value={formData.desiredRate}
-              onChange={(e) => setFormData({ ...formData, desiredRate: e.target.value })}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Willing to start at for 90 days"
-              value={formData.startRate}
-              onChange={(e) => setFormData({ ...formData, startRate: e.target.value })}
-            />
-          </Grid>
-
           <Grid item xs={12}>
             <Typography variant="subtitle1">Years of Experience</Typography>
             <RadioGroup
               row
               value={formData.experience}
-              onChange={(e) => setFormData({ ...formData, experience: Number(e.target.value) })}
+              onChange={handleChange}
             >
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((year) => (
                 <FormControlLabel
@@ -224,23 +259,20 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               rows={2}
               label="Previous Companies"
               value={formData.previousCompanies}
-              onChange={(e) => setFormData({ ...formData, previousCompanies: e.target.value })}
+              onChange={handleChange}
             />
           </Grid>
 
           <Grid item xs={12}>
-            <Typography variant="subtitle1">Painting Skills</Typography>
-            <FormControl component="fieldset">
+            <Typography variant="subtitle1" gutterBottom>
+              Painting Skills
+            </Typography>
+            <FormGroup>
               <FormControlLabel
                 control={
                   <Checkbox
                     checked={formData.skills.painting}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        skills: { ...formData.skills, painting: e.target.checked },
-                      })
-                    }
+                    onChange={handleSkillsChange('painting')}
                   />
                 }
                 label="Painting"
@@ -249,12 +281,7 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
                 control={
                   <Checkbox
                     checked={formData.skills.staining}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        skills: { ...formData.skills, staining: e.target.checked },
-                      })
-                    }
+                    onChange={handleSkillsChange('staining')}
                   />
                 }
                 label="Staining"
@@ -263,17 +290,12 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
                 control={
                   <Checkbox
                     checked={formData.skills.spraying}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        skills: { ...formData.skills, spraying: e.target.checked },
-                      })
-                    }
+                    onChange={handleSkillsChange('spraying')}
                   />
                 }
                 label="Spraying"
               />
-            </FormControl>
+            </FormGroup>
           </Grid>
 
           <Grid item xs={12}>
@@ -282,7 +304,7 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               <RadioGroup
                 row
                 value={formData.transportation}
-                onChange={(e) => setFormData({ ...formData, transportation: e.target.value as 'Truck' | 'Car' | 'None' })}
+                onChange={handleChange}
               >
                 <FormControlLabel value="Truck" control={<Radio />} label="Truck" />
                 <FormControlLabel value="Car" control={<Radio />} label="Car" />
@@ -297,7 +319,7 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               <RadioGroup
                 row
                 value={formData.hasTools}
-                onChange={(e) => setFormData({ ...formData, hasTools: e.target.value as 'Yes' | 'No' })}
+                onChange={handleChange}
               >
                 <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
                 <FormControlLabel value="No" control={<Radio />} label="No" />
@@ -311,7 +333,7 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               <RadioGroup
                 row
                 value={formData.okWithPayroll}
-                onChange={(e) => setFormData({ ...formData, okWithPayroll: e.target.value as 'Yes' | 'No' })}
+                onChange={handleChange}
               >
                 <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
                 <FormControlLabel value="No" control={<Radio />} label="No" />
@@ -325,7 +347,7 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               <RadioGroup
                 row
                 value={formData.felonyConviction}
-                onChange={(e) => setFormData({ ...formData, felonyConviction: e.target.value as 'Yes' | 'No' })}
+                onChange={handleChange}
               >
                 <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
                 <FormControlLabel value="No" control={<Radio />} label="No" />
@@ -339,7 +361,7 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               <RadioGroup
                 row
                 value={formData.okWithWeekends}
-                onChange={(e) => setFormData({ ...formData, okWithWeekends: e.target.value as 'Yes' | 'No' })}
+                onChange={handleChange}
               >
                 <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
                 <FormControlLabel value="No" control={<Radio />} label="No" />
@@ -354,17 +376,17 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
               rows={2}
               label="Hobbies"
               value={formData.hobbies}
-              onChange={(e) => setFormData({ ...formData, hobbies: e.target.value })}
+              onChange={handleChange}
             />
           </Grid>
 
           <Grid item xs={12}>
             <FormControl component="fieldset">
-              <Typography variant="subtitle1">Fired before?</Typography>
+              <FormLabel component="legend">Have you ever been fired?</FormLabel>
               <RadioGroup
-                row
+                name="firedBefore"
                 value={formData.firedBefore}
-                onChange={(e) => setFormData({ ...formData, firedBefore: e.target.value as 'Yes' | 'No' })}
+                onChange={handleChange}
               >
                 <FormControlLabel value="Yes" control={<Radio />} label="Yes" />
                 <FormControlLabel value="No" control={<Radio />} label="No" />
@@ -372,35 +394,44 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
             </FormControl>
           </Grid>
 
-          {formData.firedBefore === 'Yes' && (
+          {showFiringReason && (
             <Grid item xs={12}>
               <TextField
                 fullWidth
+                label="Reason for being fired"
+                name="firingReason"
+                value={formData.firingReason}
+                onChange={handleChange}
                 multiline
                 rows={2}
-                label="Reason for being fired"
-                value={formData.firingReason}
-                onChange={(e) => setFormData({ ...formData, firingReason: e.target.value })}
+                required
               />
             </Grid>
           )}
 
           <Grid item xs={12}>
-            <Typography variant="subtitle1">Rating (1-5)</Typography>
-            <RadioGroup
-              row
-              value={formData.rating}
-              onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) })}
-            >
-              {[1, 2, 3, 4, 5].map((rating) => (
-                <FormControlLabel
-                  key={rating}
-                  value={rating}
-                  control={<Radio />}
-                  label={rating}
-                />
-              ))}
-            </RadioGroup>
+            <Box sx={{ mt: 2 }}>
+              <Typography component="legend">Rating (1 = Poor, 5 = Excellent)</Typography>
+              <Rating
+                name="rating"
+                value={formData.rating || 0}
+                onChange={(_, newValue) => {
+                  handleChange({ target: { name: 'rating', value: newValue || 0 } });
+                }}
+                precision={1}
+              />
+            </Box>
+          </Grid>
+
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              multiline
+              rows={2}
+              label="Notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            />
           </Grid>
 
           <Grid item xs={12}>
@@ -416,7 +447,7 @@ const InterviewForm: React.FC<InterviewFormProps> = ({ initialData, onComplete }
             </Box>
           </Grid>
         </Grid>
-      </form>
+      </Box>
     </Paper>
   );
 };
