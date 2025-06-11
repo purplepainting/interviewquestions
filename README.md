@@ -51,4 +51,4 @@ The application will be available at http://localhost:3000
 - React
 - TypeScript
 - Material-UI
-- Vite 
+- Vite
